@@ -19,12 +19,12 @@ EMlauncherのMySQLデータベースとの通信のためにmysql2を、Profile 
 EMlauncherからのProfile Serviceの要求の参照と、Profile Serviceによって取得しrたテスト端末のUDIDの記録のためにEMlauncherのMySQLテーブルへのアクセスが必要となるので、EMlauncher側でデータベースのテーブル(emlauncher.ios_device_infoのみで可)に対してのDELETE, INSERT, SELECT, UPDATE権限を付与しておいてください。
 
 MySQLサーバーへの接続情報はスクリプトの484行目、@@mysql_connection_infoを適当に修正します。
-EMlauncherで使用するテーブルの名称なども必要であれば変更します。
+EMlauncherで使用するデータベースの名称なども必要であれば変更します。
 
 ```
-    55	# Connection information for EMlauncher MuSQL Server
+    55	# Connection information for EMlauncher MySQL Server
     56	@@mysql_connection_info = {:host => 'emlauncher.example.com', :username => 'emlauncher', :password => 'password'}
-    57	# MySQL table name for EMlauncher iOS Device informations
+    57	# MySQL database name for EMlauncher
     58	@@table_name = "emlauncher"
 ```
 

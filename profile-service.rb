@@ -52,9 +52,9 @@ require 'base64'
 @@emlauncher_url = "https://emlauncher.example.com/"
 # prefix for profile payload
 @@secp_prefix = "com.example"
-# Connection information for EMlauncher MuSQL Server
+# Connection information for EMlauncher MySQL Server
 @@mysql_connection_info = {:host => 'emlauncher.example.com', :username => 'emlauncher', :password => 'password'}
-# MySQL table name for EMlauncher iOS Device informations
+# MySQL database name for EMlauncher
 @@table_name = "emlauncher"
 # String for Display WebClip Icon title and other
 @@emlauncher_title = "EMlauncher"
