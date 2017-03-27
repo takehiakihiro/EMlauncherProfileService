@@ -262,7 +262,7 @@ def webclip_payload_with_uuid(request)
     webclip_payload['Label'] = @@emlauncher_title
     webclip_payload['URL'] = @@emlauncher_url + "?device_uuid=" + query['device_uuid'];
 
-    if File.exists?("WebClipIcon.png")
+    if File.exist?("WebClipIcon.png")
         webclip_payload['Icon'] = StringIO.new(File.read("WebClipIcon.png"))
     end
 
@@ -287,7 +287,7 @@ def webclip_payload(request)
     webclip_payload['Label'] = @@emlauncher_title
     webclip_payload['URL'] = @@emlauncher_url
 
-    if File.exists?("WebClipIcon.png")
+    if File.exist?("WebClipIcon.png")
         webclip_payload['Icon'] = StringIO.new(File.read("WebClipIcon.png"))
     end
 
@@ -331,7 +331,7 @@ def init
         ra_cert_ok = true
         @@ssl_key = OpenSSL::PKey::RSA.new(File.read("ssl_private.pem"))
         @@ssl_cert = OpenSSL::X509::Certificate.new(File.read("ssl_cert.pem"))
-        if File.exists?("ssl_chain.pem")
+        if File.exist?("ssl_chain.pem")
 	    @@ssl_chain = OpenSSL::X509::Certificate.new(File.read("ssl_chain.pem"))
             @@ssl_chain.extensions.each { |e|
                 print "chain:***#{e.value}***\n"
