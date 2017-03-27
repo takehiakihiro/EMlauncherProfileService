@@ -23,9 +23,7 @@ EMlauncherで使用するデータベースの名称なども必要であれば�
 
 ```
     55	# Connection information for EMlauncher MySQL Server
-    56	@@mysql_connection_info = {:host => 'emlauncher.example.com', :username => 'emlauncher', :password => 'password'}
-    57	# MySQL database name for EMlauncher
-    58	@@table_name = "emlauncher"
+    56	@@mysql_connection_info = {:host => 'emlauncher.example.com', :username => 'emlauncher', :password => 'password', :encoding => 'utf8', :database => 'emlauncher'}
 ```
 
 SECPサービスを稼働させるサーバーのホスト名(FQDN)を@@addressに設定します。
@@ -61,8 +59,8 @@ Profile ServiceによってiOSテスト端末へとインストールされるWe
 スクリプトの60行目の@@emlauncher_titleを変更すると、SECPサービスで使われる証明書やプロフィールに表示されるタイトルやWebClipアイコンに表示されるキャプションを変更できます。
 
 ```
-    59	# String for Display WebClip Icon title and other
-    60	@@emlauncher_title = "EMlauncher"
+    57	# String for Display WebClip Icon title and other
+    58	@@emlauncher_title = "EMlauncher"
 ```
 
 54行目の@@secp_prefixはProfile Serviceで生成されるプロフィールのペイロード識別子のプレフィックスに使われる文字列です。

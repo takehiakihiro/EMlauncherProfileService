@@ -53,9 +53,7 @@ require 'base64'
 # prefix for profile payload
 @@secp_prefix = "com.example"
 # Connection information for EMlauncher MySQL Server
-@@mysql_connection_info = {:host => 'emlauncher.example.com', :username => 'emlauncher', :password => 'password'}
-# MySQL database name for EMlauncher
-@@table_name = "emlauncher"
+@@mysql_connection_info = {:host => 'emlauncher.example.com', :username => 'emlauncher', :password => 'password', :encoding => 'utf8', :database => 'emlauncher'}
 # String for Display WebClip Icon title and other
 @@emlauncher_title = "EMlauncher"
 
@@ -173,7 +171,7 @@ def profile_service_payload(request, challenge)
         "VERSION",
         "PRODUCT",              # ie. iPhone1,1 or iPod2,1
         "MAC_ADDRESS_EN0",      # WiFi MAC address
-        "DEVICE_NAME",          # given device name "iPhone"
+        "DEVICE_NAME"           # given device name "iPhone"
 =begin
         # Items below are only available on iPhones
         "IMEI",
@@ -492,6 +490,9 @@ world.mount_proc("/profile") { |req, res|
     #
     device_attributes = Plist::parse_xml(p7sign.data)
     device_udid = device_attributes['UDID']
+    device_name = device_attributes['DEVICE_NAME']
+    device_version = device_attributes['VERSION']
+    device_product = device_attributes['PRODUCT']
     print "Device UDID: #{device_udid}\n"
     query = HTTPUtils::parse_query(req.query_string)
     device_uuid = query['device_uuid'];
@@ -508,8 +509,8 @@ world.mount_proc("/profile") { |req, res|
         else
           if !device_uuid.nil? && !device_uuid.empty?
             # username, :password, :host, :port, :database, :socket
-            client = Mysql2::Client.new(@mysql_connection_info)
-            sql = "select mail, device_uuid from #{@@table_name}.ios_udid where device_uuid=?"
+            client = Mysql2::Client.new(@@mysql_connection_info)
+            sql = %{select mail, device_uuid from ios_device_info where device_uuid=?}
             stmt = client.prepare(sql)
             results = stmt.execute(device_uuid)
             results.each do |row|
@@ -519,7 +520,7 @@ world.mount_proc("/profile") { |req, res|
               end
             end
             if results.count > 0
-              sql = "select device_uuid from #{@@table_name}.ios_udid where device_uuid!=? and device_udid=?"
+              sql = %{select device_uuid from ios_device_info where device_uuid!=? and device_udid=?}
               stmt = client.prepare(sql)
               results = stmt.execute(device_uuid, device_udid)
               if results.count > 0
@@ -529,18 +530,18 @@ world.mount_proc("/profile") { |req, res|
                     puts "#{key} => #{value}"
                   end
                 end
-                sql = "delete from #{@@table_name}.ios_udid where device_uuid!=? and device_udid=?"
+                sql = %{delete from ios_device_info where device_uuid!=? and device_udid=?}
                 stmt = client.prepare(sql)
                 results = stmt.execute(device_uuid, device_udid)
               end
 
-              sql = "select device_udid from #{@@table_name}.ios_udid where device_uuid=?"
+              sql = %{select device_udid from ios_device_info where device_uuid=?}
               stmt = client.prepare(sql)
               results = stmt.execute(device_uuid)
               if results.count > 0
-                sql = "update #{@@table_name}.ios_udid set device_udid=? where device_uuid=?"
+                sql = %{update ios_device_info set device_udid=?, device_name=?, device_version=?, device_product=? where device_uuid=?}
                 stmt = client.prepare(sql)
-                results = stmt.execute(device_udid, device_uuid)
+                results = stmt.execute(device_udid, device_name, device_version, device_product, device_uuid)
               end
               @@issued_first_profile.add(signers[0].serial.to_s)
               payload = webclip_payload_with_uuid(req)
