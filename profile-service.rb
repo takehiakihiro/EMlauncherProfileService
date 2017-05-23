@@ -45,13 +45,13 @@ require 'mysql2'
 require 'base64'
 
 # explicitly set this to host ip or name if more than one interface exists
-@@address = "secp.example.com"
-# SECP service port number.
+@@address = "scep.example.com"
+# SCEP service port number.
 @@port = 8443
 # EMlauncher URL.
 @@emlauncher_url = "https://emlauncher.example.com/"
 # prefix for profile payload
-@@secp_prefix = "com.example"
+@@scep_prefix = "com.example"
 # Connection information for EMlauncher MySQL Server
 @@mysql_connection_info = {:host => 'emlauncher.example.com', :username => 'emlauncher', :password => 'password', :encoding => 'utf8', :database => 'emlauncher'}
 # String for Display WebClip Icon title and other
@@ -158,7 +158,7 @@ def profile_service_payload(request, challenge)
     payload = general_payload()
 
     payload['PayloadType'] = "Profile Service" # do not modify
-    payload['PayloadIdentifier'] = @@secp_prefix + ".mobileconfig.profile-service"
+    payload['PayloadIdentifier'] = @@scep_prefix + ".mobileconfig.profile-service"
 
     # strings that show up in UI, customisable
     payload['PayloadDisplayName'] = "EMLauncher Configuration Service"
@@ -190,7 +190,7 @@ end
 def scep_cert_payload(request, purpose, challenge)
     payload = general_payload()
 
-    payload['PayloadIdentifier'] = @@secp_prefix + ".encryption-cert-request"
+    payload['PayloadIdentifier'] = @@scep_prefix + ".encryption-cert-request"
     payload['PayloadType'] = "com.apple.security.scep" # do not modify
 
     # strings that show up in UI, customisable
@@ -229,7 +229,7 @@ end
 def encryption_cert_payload(request, challenge)
     payload = general_payload()
     
-    payload['PayloadIdentifier'] = @@secp_prefix + ".encrypted-profile-service"
+    payload['PayloadIdentifier'] = @@scep_prefix + ".encrypted-profile-service"
     payload['PayloadType'] = "Configuration" # do not modify
   
     # strings that show up in UI, customisable
@@ -245,7 +245,7 @@ def webclip_payload_with_uuid(request)
 
     webclip_payload = general_payload()
 
-    webclip_payload['PayloadIdentifier'] = @@secp_prefix + ".webclip.emlauncher"
+    webclip_payload['PayloadIdentifier'] = @@scep_prefix + ".webclip.emlauncher"
     webclip_payload['PayloadType'] = "com.apple.webClip.managed" # do not modify
 
     # strings that show up in UI, customisable
@@ -273,7 +273,7 @@ def webclip_payload(request)
 
     webclip_payload = general_payload()
 
-    webclip_payload['PayloadIdentifier'] = @@secp_prefix + ".webclip.emlauncher"
+    webclip_payload['PayloadIdentifier'] = @@scep_prefix + ".webclip.emlauncher"
     webclip_payload['PayloadType'] = "com.apple.webClip.managed" # do not modify
 
     # strings that show up in UI, customisable
@@ -297,7 +297,7 @@ end
 
 def configuration_payload(request, encrypted_content)
     payload = general_payload()
-    payload['PayloadIdentifier'] = @@secp_prefix + ".emlauncher"
+    payload['PayloadIdentifier'] = @@scep_prefix + ".emlauncher"
     payload['PayloadType'] = "Configuration" # do not modify
 
     # strings that show up in UI, customisable
