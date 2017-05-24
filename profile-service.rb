@@ -553,6 +553,9 @@ world.mount_proc("/profile") { |req, res|
               end
             end
             if results.count > 0
+              # メールアドレスでWiFi設定用ペイロードの有無を決定する例
+              # ここでresultからユーザーのメールアドレスを保存しておく
+              #mail = results.first['mail']
               sql = %{select device_uuid from ios_device_info where device_uuid!=? and device_udid=?}
               stmt = client.prepare(sql)
               results = stmt.execute(device_uuid, device_udid)
@@ -578,7 +581,6 @@ world.mount_proc("/profile") { |req, res|
               end
               @@issued_first_profile.add(signers[0].serial.to_s)
               # メールアドレスでWiFi設定用ペイロードの有無を決定する例
-              #mail = results.first['mail']
               #payload = webclip_payload_with_uuid(req, ( mail.include?("sub1.exapmle.com") || mail.include?("sub2.example.com") ))
               # WiFiペイロードの無し
               payload = webclip_payload_with_uuid(req, false)
