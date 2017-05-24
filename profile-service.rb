@@ -241,7 +241,7 @@ def encryption_cert_payload(request, challenge)
 end
 
 
-def webclip_payload_with_uuid(request)
+def webclip_payload_with_uuid(request, with_wifi)
 
     webclip_payload = general_payload()
 
@@ -266,8 +266,41 @@ def webclip_payload_with_uuid(request)
         webclip_payload['Icon'] = StringIO.new(File.read("WebClipIcon.png"))
     end
 
-    Plist::Emit.dump([webclip_payload])
+    if with_wifi
+      wifi_payload = wifi_payload(request);
+      return_payload = Plist::Emit.dump([webclip_payload, wifi_payload])
+    else
+      return_payload = Plist::Emit.dump([webclip_payload])
+    end
+
+    return_payload
 end
+
+
+def wifi_payload(request)
+
+    wifi_payload = general_payload()
+
+    wifi_payload['PayloadIdentifier'] = @@scep_prefix + ".wifi.emlauncher"
+    wifi_payload['PayloadType'] = "com.apple.wifi.managed" # do not modify
+
+    # strings that show up in UI, customisable
+    wifi_payload['PayloadDisplayName'] = "Wi-Fi"
+    wifi_payload['PayloadDescription'] = "Wi-Fi 設定を構成します"
+
+    # Wi-Fi Settongs.
+    wifi_payload['AutoJoin'] = true
+    wifi_payload['CaptiveBypass'] = false
+    wifi_payload['EncryptionType'] = "WPA2"
+    wifi_payload['HIDDEN_NETWORK'] = false
+    wifi_payload['IsHotspot'] = false
+    wifi_payload['Password'] = "WiFi Password Here"
+    wifi_payload['SSID_STR'] = "WiFi SSID Hire"
+    wifi_payload['ProxyType'] = "None"
+
+    wifi_payload
+end
+
 
 def webclip_payload(request)
 
@@ -544,7 +577,13 @@ world.mount_proc("/profile") { |req, res|
                 results = stmt.execute(device_udid, device_name, device_version, device_product, device_uuid)
               end
               @@issued_first_profile.add(signers[0].serial.to_s)
-              payload = webclip_payload_with_uuid(req)
+              # メールアドレスでWiFi設定用ペイロードの有無を決定する例
+              #mail = results.first['mail']
+              #payload = webclip_payload_with_uuid(req, ( mail.include?("sub1.exapmle.com") || mail.include?("sub2.example.com") ))
+              # WiFiペイロードの無し
+              payload = webclip_payload_with_uuid(req, false)
+              # WiFiペイロードの有り
+              #payload = webclip_payload_with_uuid(req, true)
                         
               #File.open("payload", "w") { |f| f.write payload }
               encrypted_profile = OpenSSL::PKCS7.encrypt(p7sign.certificates,
