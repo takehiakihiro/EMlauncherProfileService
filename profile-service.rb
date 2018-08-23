@@ -48,14 +48,14 @@ require 'base64'
 @@address = "192.168.1.55"
 # SCEP service port number.
 @@port = 8443
-# EMlauncher URL.
-@@emlauncher_url = "https://192.168.1.55/"
+# OTA Delivery Server URL.
+@@otaserver_url = "https://192.168.1.55/"
 # prefix for profile payload
 @@scep_prefix = "net.tone"
-# Connection information for EMlauncher MySQL Server
+# Connection information for OTA MySQL Server
 @@mysql_connection_info = {:host => '127.0.0.1', :username => 'tone', :password => 'fbdc1234', :encoding => 'utf8', :database => 'ota'}
 # String for Display WebClip Icon title and other
-@@emlauncher_title = "TONE OTA"
+@@otaserver_title = "TONE OTA"
 
 def local_ip
     # turn off reverse DNS resolution temporarily
@@ -149,7 +149,7 @@ def general_payload
     payload['PayloadUUID'] = UUIDTools::UUID.random_create().to_s # should be unique
 
     # string that show up in UI, customisable
-    payload['PayloadOrganization'] = "EMLauncher."
+    payload['PayloadOrganization'] = "TONE Mobile"
     payload
 end
 
@@ -161,8 +161,8 @@ def profile_service_payload(request, challenge)
     payload['PayloadIdentifier'] = @@scep_prefix + ".mobileconfig.profile-service"
 
     # strings that show up in UI, customisable
-    payload['PayloadDisplayName'] = "EMLauncher Configuration Service"
-    payload['PayloadDescription'] = "Install this profile to enroll for secure access to #{@@emlauncher_title}."
+    payload['PayloadDisplayName'] = "TONE Mobile Configuration Service"
+    payload['PayloadDescription'] = "Install this profile to enroll for secure access to #{@@otaserver_title}."
 
     payload_content = Hash.new
     payload_content['URL'] = "https://" + service_address(request) + "/profile"
@@ -203,7 +203,7 @@ def scep_cert_payload(request, purpose, challenge)
     # scep instance NOTE: required for MS SCEP servers
     payload_content['Name'] = "" 
 =end
-    payload_content['Subject'] = [ [ [ "O", @@emlauncher_title ] ], 
+    payload_content['Subject'] = [ [ [ "O", @@otaserver_title ] ], 
         [ [ "CN", purpose + " (" + UUIDTools::UUID.random_create().to_s + ")" ] ] ];
     if (!challenge.empty?)
         payload_content['Challenge'] = challenge
@@ -245,12 +245,12 @@ def webclip_payload_with_uuid(request, with_wifi)
 
     webclip_payload = general_payload()
 
-    webclip_payload['PayloadIdentifier'] = @@scep_prefix + ".webclip.emlauncher"
+    webclip_payload['PayloadIdentifier'] = @@scep_prefix + ".webclip.tonemobile"
     webclip_payload['PayloadType'] = "com.apple.webClip.managed" # do not modify
 
     # strings that show up in UI, customisable
-    webclip_payload['PayloadDisplayName'] = @@emlauncher_title
-    webclip_payload['PayloadDescription'] = "Creates a link to the #{@@emlauncher_title} on the home screen"
+    webclip_payload['PayloadDisplayName'] = @@otaserver_title
+    webclip_payload['PayloadDescription'] = "Creates a link to the #{@@otaserver_title} on the home screen"
     
     # allow user to remove webclip
     webclip_payload['IsRemovable'] = true
@@ -259,8 +259,8 @@ def webclip_payload_with_uuid(request, with_wifi)
     query = HTTPUtils::parse_query(request.query_string)
     print "device_uuid: #{query['device_uuid']}\n"
 
-    webclip_payload['Label'] = @@emlauncher_title
-    webclip_payload['URL'] = @@emlauncher_url + "?device_uuid=" + query['device_uuid'];
+    webclip_payload['Label'] = @@otaserver_title
+    webclip_payload['URL'] = @@otaserver_url + "?device_uuid=" + query['device_uuid'];
 
     if File.exist?("WebClipIcon.png")
         webclip_payload['Icon'] = StringIO.new(File.read("WebClipIcon.png"))
@@ -281,7 +281,7 @@ def wifi_payload(request)
 
     wifi_payload = general_payload()
 
-    wifi_payload['PayloadIdentifier'] = @@scep_prefix + ".wifi.emlauncher"
+    wifi_payload['PayloadIdentifier'] = @@scep_prefix + ".wifi.tonemobile"
     wifi_payload['PayloadType'] = "com.apple.wifi.managed" # do not modify
 
     # strings that show up in UI, customisable
@@ -306,19 +306,19 @@ def webclip_payload(request)
 
     webclip_payload = general_payload()
 
-    webclip_payload['PayloadIdentifier'] = @@scep_prefix + ".webclip.emlauncher"
+    webclip_payload['PayloadIdentifier'] = @@scep_prefix + ".webclip.tonemobile"
     webclip_payload['PayloadType'] = "com.apple.webClip.managed" # do not modify
 
     # strings that show up in UI, customisable
-    webclip_payload['PayloadDisplayName'] = @@emlauncher_title
-    webclip_payload['PayloadDescription'] = "Creates a link to the #{@@emlauncher_title} on the home screen"
+    webclip_payload['PayloadDisplayName'] = @@otaserver_title
+    webclip_payload['PayloadDescription'] = "Creates a link to the #{@@otaserver_title} on the home screen"
     
     # allow user to remove webclip
     webclip_payload['IsRemovable'] = true
     
     # the link
-    webclip_payload['Label'] = @@emlauncher_title
-    webclip_payload['URL'] = @@emlauncher_url
+    webclip_payload['Label'] = @@otaserver_title
+    webclip_payload['URL'] = @@otaserver_url
 
     if File.exist?("WebClipIcon.png")
         webclip_payload['Icon'] = StringIO.new(File.read("WebClipIcon.png"))
@@ -330,12 +330,12 @@ end
 
 def configuration_payload(request, encrypted_content)
     payload = general_payload()
-    payload['PayloadIdentifier'] = @@scep_prefix + ".emlauncher"
+    payload['PayloadIdentifier'] = @@scep_prefix + ".tonemobile"
     payload['PayloadType'] = "Configuration" # do not modify
 
     # strings that show up in UI, customisable
-    payload['PayloadDisplayName'] = @@emlauncher_title + " Config"
-    payload['PayloadDescription'] = "Access to the " + @@emlauncher_title
+    payload['PayloadDisplayName'] = @@otaserver_title + " Config"
+    payload['PayloadDescription'] = "Access to the " + @@otaserver_title
     payload['PayloadExpirationDate'] = Date.today + 365 # expire today, for demo purposes
 
     payload['EncryptedPayloadContent'] = StringIO.new(encrypted_content)
@@ -416,7 +416,7 @@ def init
         end
         
         @@ssl_key = OpenSSL::PKey::RSA.new(1024)
-        @@ssl_cert = issue_cert( OpenSSL::X509::Name.parse("/O=None/CN=#{@@emlauncher_title} Profile Service"),
+        @@ssl_cert = issue_cert( OpenSSL::X509::Name.parse("/O=None/CN=#{@@otaserver_title} Profile Service"),
             @@ssl_key, @@serial, Time.now, Time.now+(86400*365), 
             [   
                 ["keyUsage","Digital Signature",true] ,
@@ -474,7 +474,7 @@ p { font-size:60px; }
 a { text-decoration:none; }
 </style>
 
-<h1 >#{@@emlauncher_title} Profile Service</h1>
+<h1 >#{@@otaserver_title} Profile Service</h1>
 
 <p>If you had to accept the certificate accessing this page, you should
 download the <a href="/CA">root certificate</a> and install it so it becomes trusted. 
