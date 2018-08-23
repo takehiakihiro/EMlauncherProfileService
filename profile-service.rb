@@ -45,17 +45,17 @@ require 'mysql2'
 require 'base64'
 
 # explicitly set this to host ip or name if more than one interface exists
-@@address = "scep.example.com"
+@@address = "192.168.1.55"
 # SCEP service port number.
 @@port = 8443
 # EMlauncher URL.
-@@emlauncher_url = "https://emlauncher.example.com/"
+@@emlauncher_url = "https://192.168.1.55/"
 # prefix for profile payload
-@@scep_prefix = "com.example"
+@@scep_prefix = "net.tone"
 # Connection information for EMlauncher MySQL Server
-@@mysql_connection_info = {:host => 'emlauncher.example.com', :username => 'emlauncher', :password => 'password', :encoding => 'utf8', :database => 'emlauncher'}
+@@mysql_connection_info = {:host => '127.0.0.1', :username => 'tone', :password => 'fbdc1234', :encoding => 'utf8', :database => 'ota'}
 # String for Display WebClip Icon title and other
-@@emlauncher_title = "EMlauncher"
+@@emlauncher_title = "TONE OTA"
 
 def local_ip
     # turn off reverse DNS resolution temporarily
@@ -490,7 +490,9 @@ WELCOME_MESSAGE
 
 world.mount_proc("/CA") { |req, res|
     res['Content-Type'] = "application/x-x509-ca-cert"
+    print "before to set /CA res.body\n"
     res.body = @@root_cert.to_der
+    print "set /CA res.body\n"
 }
 
 world.mount_proc("/enroll") { |req, res|
@@ -648,17 +650,22 @@ world.mount_proc("/scep"){ |req, res|
   query = HTTPUtils::parse_query(req.query_string)
   
   if query['operation'] == "GetCACert"
+    print "query[operation] == GetCACert\n"
     res['Content-Type'] = "application/x-x509-ca-ra-cert"
     scep_certs = OpenSSL::PKCS7.new()
-    scep_certs.type="signed"
-    scep_certs.certificates=[@@root_cert, @@ra_cert]
+    scep_certs.type = "signed"
+    scep_certs.add_certificate @@root_cert
+    scep_certs.add_certificate @@ra_cert
+    scep_certs.add_data ""
     res.body = scep_certs.to_der
   else 
     if query['operation'] == "GetCACaps"
-        res['Content-Type'] = "text/plain"
-        res.body = "POSTPKIOperation\nSHA-1\nDES3\n"
+      print "query[operation] == GetCACaps\n"
+      res['Content-Type'] = "text/plain"
+      res.body = "POSTPKIOperation\nSHA-1\nDES3\n"
     else
       if query['operation'] == "PKIOperation"
+        print "query[operation] == PKIOperation\n"
         p7sign = OpenSSL::PKCS7.new(req.body)
         store = OpenSSL::X509::Store.new
         p7sign.verify(nil, store, nil, OpenSSL::PKCS7::NOVERIFY)
@@ -667,8 +674,9 @@ world.mount_proc("/scep"){ |req, res|
         csr = p7enc.decrypt(@@ra_key, @@ra_cert)
         cert = issueCert(csr, 1)
         degenerate_pkcs7 = OpenSSL::PKCS7.new()
-        degenerate_pkcs7.type="signed"
-        degenerate_pkcs7.certificates=[cert]
+        degenerate_pkcs7.type = "signed"
+        degenerate_pkcs7.add_certificate cert
+        degenerate_pkcs7.add_data ""
         enc_cert = OpenSSL::PKCS7.encrypt(p7sign.certificates, degenerate_pkcs7.to_der, 
             OpenSSL::Cipher::Cipher::new("des-ede3-cbc"), OpenSSL::PKCS7::BINARY)
         reply = OpenSSL::PKCS7.sign(@@ra_cert, @@ra_key, enc_cert.to_der, [], OpenSSL::PKCS7::BINARY)
@@ -677,6 +685,7 @@ world.mount_proc("/scep"){ |req, res|
        end
      end
   end
+  print "/scep end\n"
 }
 
 trap(:INT) do
