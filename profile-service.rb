@@ -45,11 +45,11 @@ require 'mysql2'
 require 'base64'
 
 # explicitly set this to host ip or name if more than one interface exists
-@@address = "192.168.1.55"
+@@address = "192.168.11.28"
 # SCEP service port number.
 @@port = 8443
 # OTA Delivery Server URL.
-@@otaserver_url = "https://192.168.1.55/"
+@@otaserver_url = "https://192.168.11.28/"
 # prefix for profile payload
 @@scep_prefix = "net.tone"
 # Connection information for OTA MySQL Server
@@ -324,7 +324,55 @@ def webclip_payload(request)
         webclip_payload['Icon'] = StringIO.new(File.read("WebClipIcon.png"))
     end
 
+    print "--start web clip---------------------------------------\n"
+    print Plist::Emit.dump(webclip_payload)
+    print "--end   web clip---------------------------------------\n"
     Plist::Emit.dump([webclip_payload])
+end
+
+
+def vpn_payload(request)
+
+    vpn_payload = general_payload()
+
+    vpn_payload['PayloadIdentifier'] = "com.apple.vpn.managed.8D469050-DA80-4926-A211-2B0C150B91F0"
+    vpn_payload['PayloadType'] = "com.apple.vpn.managed" # do not modify
+
+    # strings that show up in UI, customisable
+    vpn_payload['PayloadDisplayName'] = "VPN"
+    vpn_payload['PayloadDescription'] = "VPN 設定を構成します"
+
+    vpn_payload['UserDefinedName'] = "TONE_IPSec"
+    vpn_payload['VPNType'] = "IPSec"
+    vpn_payload['OnDemandEnabled'] = 1
+    on_demand_rule = Hash.new
+    on_demand_rule['Action'] = "Connect"
+    vpn_payload['OnDemandRules'] = [on_demand_rule]
+
+    ipsec = Hash.new
+    ipsec['AuthenticationMethod'] = "SharedSecret"
+    ipsec['LocalIdentifierType'] = "KeyID"
+    ipsec['RemoteAddress'] = "192.168.11.46"
+    #ipsec['SharedSecret'] = StringIO.new("ZnJlZWJpdA==")
+    ipsec['SharedSecret'] = StringIO.new("freebit")
+    ipsec['XAuthEnabled'] = 1
+    ipsec['XAuthName'] = "freebit"
+    ipsec['XAuthPassword'] = "fbdc1234"
+    vpn_payload['IPSec'] = ipsec
+
+    ipv4 = Hash.new
+    ipv4['OverridePrimary'] = 0
+    vpn_payload['IPv4'] = ipv4
+
+    proxies = Hash.new
+    proxies['HTTPEnable'] = 0
+    proxies['HTTPSEnable'] = 0
+    vpn_payload['Proxies'] = proxies
+
+    print "--start vpn configuration payload---------------------------------------\n"
+    print Plist::Emit.dump(vpn_payload)
+    print "--end   vpn configuration payload---------------------------------------\n"
+    Plist::Emit.dump([vpn_payload])
 end
 
 
@@ -336,9 +384,13 @@ def configuration_payload(request, encrypted_content)
     # strings that show up in UI, customisable
     payload['PayloadDisplayName'] = @@otaserver_title + " Config"
     payload['PayloadDescription'] = "Access to the " + @@otaserver_title
-    payload['PayloadExpirationDate'] = Date.today + 365 # expire today, for demo purposes
+    #payload['PayloadExpirationDate'] = Date.today + 365 # expire today, for demo purposes
+    #payload['PayloadExpirationDate'] = DateTime.now - 0.375 + 0.003 # expire today, for demo purposes
+    payload['PayloadExpirationDate'] = DateTime.now - 0.375 + 1 # expire today, for demo purposes
+    #payload['PayloadExpirationDate'] = DateTime.now - 0.75 + 0.003 # expire today, for demo purposes
 
     payload['EncryptedPayloadContent'] = StringIO.new(encrypted_content)
+    print Plist::Emit.dump(payload)
     Plist::Emit.dump(payload)
 end
 
@@ -389,7 +441,7 @@ def init
         then
             @@root_key = OpenSSL::PKey::RSA.new(1024)
             @@root_cert = issue_cert( OpenSSL::X509::Name.parse(
-                "/O=None/CN=EMlauncer Root CA (#{UUIDTools::UUID.random_create().to_s})"),
+                "/O=None/CN=TONE OTA Root CA (#{UUIDTools::UUID.random_create().to_s})"),
                 @@root_key, 1, Time.now, Time.now+(86400*365), 
                 [ ["basicConstraints","CA:TRUE",true],
                 ["keyUsage","Digital Signature,keyCertSign,cRLSign",true] ],
@@ -405,7 +457,7 @@ def init
         then
             @@ra_key = OpenSSL::PKey::RSA.new(1024)
             @@ra_cert = issue_cert( OpenSSL::X509::Name.parse(
-                "/O=None/CN=EMLAUNCHER SCEP RA"),
+                "/O=None/CN=TONE OTA SCEP RA"),
                 @@ra_key, @@serial, Time.now, Time.now+(86400*365), 
                 [ ["basicConstraints","CA:TRUE",true],
                 ["keyUsage","Digital Signature,keyEncipherment",true] ],
@@ -597,7 +649,8 @@ world.mount_proc("/profile") { |req, res|
 	    end
           else
             @@issued_first_profile.add(signers[0].serial.to_s)
-            payload = webclip_payload(req)
+            #payload = webclip_payload(req)
+            payload = vpn_payload(req)
             encrypted_profile = OpenSSL::PKCS7.encrypt(p7sign.certificates,
                 payload, OpenSSL::Cipher::Cipher::new("des-ede3-cbc"),
                 OpenSSL::PKCS7::BINARY)
