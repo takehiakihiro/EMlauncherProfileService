@@ -45,11 +45,11 @@ require 'mysql2'
 require 'base64'
 
 # explicitly set this to host ip or name if more than one interface exists
-@@address = "192.168.11.28"
+@@address = "192.168.1.55"
 # SCEP service port number.
 @@port = 8443
 # OTA Delivery Server URL.
-@@otaserver_url = "https://192.168.11.28/"
+@@otaserver_url = "https://192.168.1.55:8443/"
 # prefix for profile payload
 @@scep_prefix = "net.tone"
 # Connection information for OTA MySQL Server
@@ -352,8 +352,7 @@ def vpn_payload(request)
     ipsec = Hash.new
     ipsec['AuthenticationMethod'] = "SharedSecret"
     ipsec['LocalIdentifierType'] = "KeyID"
-    ipsec['RemoteAddress'] = "192.168.11.46"
-    #ipsec['SharedSecret'] = StringIO.new("ZnJlZWJpdA==")
+    ipsec['RemoteAddress'] = "192.168.1.46"
     ipsec['SharedSecret'] = StringIO.new("freebit")
     ipsec['XAuthEnabled'] = 1
     ipsec['XAuthName'] = "freebit"
@@ -376,6 +375,112 @@ def vpn_payload(request)
 end
 
 
+def limit_payload(request)
+    limit_payload = general_payload()
+
+    # strings that show up in UI, customisable
+    limit_payload['PayloadDescription'] = "Configures restrictions"
+    limit_payload['PayloadDisplayName'] = "Restrictions"
+    limit_payload['PayloadIdentifier'] = "com.apple.applicationaccess.25BA298E-E85B-481B-9337-521110EF7602"
+    limit_payload['PayloadType'] = "com.apple.applicationaccess"
+    limit_payload['allowActivityContinuation'] = true
+    limit_payload['allowAddingGameCenterFriends'] = true
+    limit_payload['allowAirPlayIncomingRequests'] = true
+    limit_payload['allowAirPrint'] = true
+    limit_payload['allowAirPrintCredentialsStorage'] = true
+    limit_payload['allowAirPrintiBeaconDiscovery'] = true
+    limit_payload['allowAppCellularDataModification'] = true
+    limit_payload['allowAppInstallation'] = true
+    limit_payload['allowAppRemoval'] = true
+    limit_payload['allowAssistant'] = true
+    limit_payload['allowAssistantWhileLocked'] = true
+    limit_payload['allowAutoCorrection'] = true
+    limit_payload['allowAutomaticAppDownloads'] = true
+    limit_payload['allowBluetoothModification'] = true
+    limit_payload['allowBookstore'] = true
+    limit_payload['allowBookstoreErotica'] = true
+    limit_payload['allowCamera'] = false
+    limit_payload['allowCellularPlanModification'] = true
+    limit_payload['allowChat'] = true
+    limit_payload['allowCloudBackup'] = true
+    limit_payload['allowCloudDocumentSync'] = true
+    limit_payload['allowCloudPhotoLibrary'] = true
+    limit_payload['allowDefinitionLookup'] = true
+    limit_payload['allowDeviceNameModification'] = true
+    limit_payload['allowDictation'] = true
+    limit_payload['allowEnablingRestrictions'] = true
+    limit_payload['allowEnterpriseAppTrust'] = true
+    limit_payload['allowEnterpriseBookBackup'] = true
+    limit_payload['allowEnterpriseBookMetadataSync'] = true
+    limit_payload['allowEraseContentAndSettings'] = true
+    limit_payload['allowExplicitContent'] = true
+    limit_payload['allowFingerprintForUnlock'] = true
+    limit_payload['allowFingerprintModification'] = true
+    limit_payload['allowGameCenter'] = true
+    limit_payload['allowGlobalBackgroundFetchWhenRoaming'] = true
+    limit_payload['allowInAppPurchases'] = true
+    limit_payload['allowKeyboardShortcuts'] = true
+    limit_payload['allowManagedAppsCloudSync'] = true
+    limit_payload['allowMultiplayerGaming'] = true
+    limit_payload['allowMusicService'] = true
+    limit_payload['allowNews'] = true
+    limit_payload['allowNotificationsModification'] = true
+    limit_payload['allowOpenFromManagedToUnmanaged'] = true
+    limit_payload['allowOpenFromUnmanagedToManaged'] = true
+    limit_payload['allowPairedWatch'] = true
+    limit_payload['allowPassbookWhileLocked'] = true
+    limit_payload['allowPasscodeModification'] = true
+    limit_payload['allowPhotoStream'] = true
+    limit_payload['allowPredictiveKeyboard'] = true
+    limit_payload['allowProximitySetupToNewDevice'] = true
+    limit_payload['allowRadioService'] = true
+    limit_payload['allowRemoteAppPairing'] = true
+    limit_payload['allowRemoteScreenObservation'] = true
+    limit_payload['allowSafari'] = true
+    limit_payload['allowScreenShot'] = true
+    limit_payload['allowSharedStream'] = true
+    limit_payload['allowSpellCheck'] = true
+    limit_payload['allowSpotlightInternetResults'] = true
+    limit_payload['allowSystemAppRemoval'] = true
+    limit_payload['allowUIAppInstallation'] = true
+    limit_payload['allowUIConfigurationProfileInstallation'] = true
+    limit_payload['allowUntrustedTLSPrompt'] = true
+    limit_payload['allowVPNCreation'] = true
+    limit_payload['allowVideoConferencing'] = true
+    limit_payload['allowVoiceDialing'] = true
+    limit_payload['allowWallpaperModification'] = true
+    limit_payload['allowiTunes'] = true
+    limit_payload['enforcedSoftwareUpdateDelay'] = 30
+    limit_payload['forceAirDropUnmanaged'] = false
+    limit_payload['forceAirPrintTrustedTLSRequirement'] = false
+    limit_payload['forceAssistantProfanityFilter'] = false
+    limit_payload['forceAuthenticationBeforeAutoFill'] = true
+    limit_payload['forceClassroomAutomaticallyJoinClasses'] = false
+    limit_payload['forceClassroomRequestPermissionToLeaveClasses'] = false
+    limit_payload['forceClassroomUnpromptedAppAndDeviceLock'] = false
+    limit_payload['forceClassroomUnpromptedScreenObservation'] = false
+    limit_payload['forceDelayedSoftwareUpdates'] = false
+    limit_payload['forceEncryptedBackup'] = false
+    limit_payload['forceITunesStorePasswordEntry'] = false
+    limit_payload['forceWatchWristDetection'] = false
+    limit_payload['forceWiFiWhitelisting'] = false
+    limit_payload['ratingApps'] = 1000
+    limit_payload['ratingMovies'] = 1000
+    limit_payload['ratingRegion'] = "jp"
+    limit_payload['ratingTVShows'] = 1000
+    limit_payload['safariAcceptCookies'] = 2
+    limit_payload['safariAllowAutoFill'] = true
+    limit_payload['safariAllowJavaScript'] = true
+    limit_payload['safariAllowPopups'] = true
+    limit_payload['safariForceFraudWarning'] = false
+
+    print "--start limit configuration payload---------------------------------------\n"
+    print Plist::Emit.dump(limit_payload)
+    print "--end   limit configuration payload---------------------------------------\n"
+    Plist::Emit.dump([limit_payload])
+end
+
+
 def configuration_payload(request, encrypted_content)
     payload = general_payload()
     payload['PayloadIdentifier'] = @@scep_prefix + ".tonemobile"
@@ -385,8 +490,8 @@ def configuration_payload(request, encrypted_content)
     payload['PayloadDisplayName'] = @@otaserver_title + " Config"
     payload['PayloadDescription'] = "Access to the " + @@otaserver_title
     #payload['PayloadExpirationDate'] = Date.today + 365 # expire today, for demo purposes
-    #payload['PayloadExpirationDate'] = DateTime.now - 0.375 + 0.003 # expire today, for demo purposes
-    payload['PayloadExpirationDate'] = DateTime.now - 0.375 + 1 # expire today, for demo purposes
+    payload['PayloadExpirationDate'] = DateTime.now - 0.375 + 0.003 # expire today, for demo purposes
+    #payload['PayloadExpirationDate'] = DateTime.now - 0.375 + 1 # expire today, for demo purposes
     #payload['PayloadExpirationDate'] = DateTime.now - 0.75 + 0.003 # expire today, for demo purposes
 
     payload['EncryptedPayloadContent'] = StringIO.new(encrypted_content)
@@ -649,8 +754,9 @@ world.mount_proc("/profile") { |req, res|
 	    end
           else
             @@issued_first_profile.add(signers[0].serial.to_s)
-            #payload = webclip_payload(req)
-            payload = vpn_payload(req)
+            payload = webclip_payload(req)
+            #payload = vpn_payload(req)
+            #payload = limit_payload(req)
             encrypted_profile = OpenSSL::PKCS7.encrypt(p7sign.certificates,
                 payload, OpenSSL::Cipher::Cipher::new("des-ede3-cbc"),
                 OpenSSL::PKCS7::BINARY)
