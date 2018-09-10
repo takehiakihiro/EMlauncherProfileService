@@ -45,11 +45,18 @@ require 'mysql2'
 require 'base64'
 
 # explicitly set this to host ip or name if more than one interface exists
-@@address = "192.168.1.55"
+#@@address = "192.168.1.55"
+@@address = "ota.rnd.net"
+@@ipsecaddress = "ipsec.rnd.net"
+#@@address = "203.181.77.174"
 # SCEP service port number.
 @@port = 8443
 # OTA Delivery Server URL.
-@@otaserver_url = "https://192.168.1.55:8443/"
+#@@otaserver_url = "https://192.168.1.55:8443/"
+#@@otaserver_url = "http://192.168.1.55:8443/"
+@@otaserver_url = "http://ota.rnd.net:8443/"
+#@@otaserver_url = "https://203.181.77.174:8443/"
+#@@otaserver_url = "http://203.181.77.174:8443/"
 # prefix for profile payload
 @@scep_prefix = "net.tone"
 # Connection information for OTA MySQL Server
@@ -165,7 +172,7 @@ def profile_service_payload(request, challenge)
     payload['PayloadDescription'] = "Install this profile to enroll for secure access to #{@@otaserver_title}."
 
     payload_content = Hash.new
-    payload_content['URL'] = "https://" + service_address(request) + "/profile"
+    payload_content['URL'] = "http://" + service_address(request) + "/profile"
     payload_content['DeviceAttributes'] = [
         "UDID", 
         "VERSION",
@@ -187,6 +194,39 @@ def profile_service_payload(request, challenge)
 end
 
 
+def profile_service_payload_without_plist_dump(request, challenge)
+    payload = general_payload()
+
+    payload['PayloadType'] = "Profile Service" # do not modify
+    payload['PayloadIdentifier'] = @@scep_prefix + ".mobileconfig.profile-service"
+
+    # strings that show up in UI, customisable
+    payload['PayloadDisplayName'] = "TONE Mobile Configuration Service"
+    payload['PayloadDescription'] = "Install this profile to enroll for secure access to #{@@otaserver_title}."
+
+    payload_content = Hash.new
+    payload_content['URL'] = "http://" + service_address(request) + "/profile"
+    payload_content['DeviceAttributes'] = [
+        "UDID", 
+        "VERSION",
+        "PRODUCT",              # ie. iPhone1,1 or iPod2,1
+        "MAC_ADDRESS_EN0",      # WiFi MAC address
+        "DEVICE_NAME"           # given device name "iPhone"
+=begin
+        # Items below are only available on iPhones
+        "IMEI",
+        "ICCID"
+=end
+        ];
+    if (challenge && !challenge.empty?)
+        payload_content['Challenge'] = challenge
+    end
+
+    payload['PayloadContent'] = payload_content
+    payload
+end
+
+
 def scep_cert_payload(request, purpose, challenge)
     payload = general_payload()
 
@@ -198,7 +238,9 @@ def scep_cert_payload(request, purpose, challenge)
     payload['PayloadDescription'] = "Provides device encryption identity"
 
     payload_content = Hash.new
-    payload_content['URL'] = "https://" + service_address(request) + "/scep"
+    payload_content['URL'] = "http://" + service_address(request) + "/scep"
+    #payload_content['URL'] = "http://" + service_address(request) + "/scep"
+    #payload_content['URL'] = "http://203.181.77.81/cgi-bin/pkiclient.exe"
 =begin
     # scep instance NOTE: required for MS SCEP servers
     payload_content['Name'] = "" 
@@ -331,6 +373,47 @@ def webclip_payload(request)
 end
 
 
+def webclip_payload_without_plist_dump(request)
+
+    webclip_payload = general_payload()
+
+    webclip_payload['PayloadIdentifier'] = @@scep_prefix + ".webclip.tonemobile"
+    webclip_payload['PayloadType'] = "com.apple.webClip.managed" # do not modify
+
+    # strings that show up in UI, customisable
+    webclip_payload['PayloadDisplayName'] = @@otaserver_title
+    webclip_payload['PayloadDescription'] = "Creates a link to the #{@@otaserver_title} on the home screen"
+    
+    # allow user to remove webclip
+    webclip_payload['IsRemovable'] = true
+    
+    # the link
+    webclip_payload['Label'] = @@otaserver_title
+    webclip_payload['URL'] = @@otaserver_url
+
+    if File.exist?("WebClipIcon.png")
+        webclip_payload['Icon'] = StringIO.new(File.read("WebClipIcon.png"))
+    end
+
+    print "--start web clip---------------------------------------\n"
+    print Plist::Emit.dump(webclip_payload)
+    print "--end   web clip---------------------------------------\n"
+    webclip_payload
+end
+
+
+def webclip_payload_with_profile_url(request)
+
+    webclip_payload = webclip_payload_without_plist_dump(request)
+    configuration = profile_service_payload_without_plist_dump(request, "signed-auth-token")
+
+    print "--start web clip and profile service---------------------------------------\n"
+    print Plist::Emit.dump([configuration, webclip_payload])
+    print "--end   web clip and profile service---------------------------------------\n"
+    Plist::Emit.dump([configuration, webclip_payload])
+end
+
+
 def vpn_payload(request)
 
     vpn_payload = general_payload()
@@ -344,10 +427,10 @@ def vpn_payload(request)
 
     vpn_payload['UserDefinedName'] = "TONE_IPSec"
     vpn_payload['VPNType'] = "IPSec"
-    vpn_payload['OnDemandEnabled'] = 1
-    on_demand_rule = Hash.new
-    on_demand_rule['Action'] = "Connect"
-    vpn_payload['OnDemandRules'] = [on_demand_rule]
+    #vpn_payload['OnDemandEnabled'] = 1
+    #on_demand_rule = Hash.new
+    #on_demand_rule['Action'] = "Connect"
+    #vpn_payload['OnDemandRules'] = [on_demand_rule]
 
     ipsec = Hash.new
     ipsec['AuthenticationMethod'] = "SharedSecret"
@@ -481,6 +564,81 @@ def limit_payload(request)
 end
 
 
+def vpn_configuration_payload(request)
+
+    intranet_webclip_payload = general_payload()
+
+    intranet_webclip_payload['PayloadIdentifier'] = @@scep_prefix + ".webclip.intranet"
+    intranet_webclip_payload['PayloadType'] = "com.apple.webClip.managed" # do not modify
+
+    # strings that show up in UI, customisable
+    intranet_webclip_payload['PayloadDisplayName'] = @@otaserver_title
+    intranet_webclip_payload['PayloadDescription'] = "Creates a link to the #{@@otaserver_title} on the home screen"
+    intranet_webclip_payload['IsRemovable'] = true
+    intranet_webclip_payload['Label'] = @@otaserver_title
+    intranet_webclip_payload['URL'] = @@otaserver_url
+
+    vpn_cert_payload = scep_cert_payload(request, "VPN", "foo");
+    
+    vpn_payload = general_payload()
+    vpn_payload['PayloadIdentifier'] = @@scep_prefix + ".vpn.intranet"
+    vpn_payload['PayloadType'] = "com.apple.vpn.managed"
+    vpn_payload['PayloadDisplayName'] = "VPN"
+    vpn_payload['PayloadDescription'] = "Configures VPN settings, including authentication."
+    vpn_payload['VPNType'] = "IPSec"
+    #vpn_payload['VPNType'] = "L2TP"
+
+    #ppp_settings = Hash.new
+	#ppp_settings['AuthName'] = "freebit"
+	#ppp_settings['AuthPassword'] = "freebit"
+	##ppp_settings['CommRemoteAddress'] = "203.181.77.81"
+	#ppp_settings['CommRemoteAddress'] = "192.168.1.46"
+    #vpn_payload['PPP'] = ppp_settings
+
+    vpn_settings = Hash.new
+    vpn_settings['AuthenticationMethod'] = "Certificate"
+    #vpn_settings['AuthenticationMethod'] = "SharedSecret"
+    #vpn_settings['SharedSecret'] = StringIO.new("freebit")
+    #vpn_settings['OnDemandEnabled'] = 1
+    #vpn_settings['OnDemandMatchDomainsAlways'] = ["*"]
+    #vpn_settings['OnDemandMatchDomainsNever'] = 
+    #vpn_settings['OnDemandMatchDomainsOnRetry'] = 
+    vpn_settings['ExtendedAuthEnabled'] = 1
+    vpn_settings['PayloadCertificateUUID'] = vpn_cert_payload['PayloadUUID'].to_s
+    #vpn_settings['RemoteAddress'] = service_address(request).split(":")[0]
+    #vpn_settings['RemoteAddress'] = "192.168.1.46"
+    vpn_settings['RemoteAddress'] = "ipsec.rnd.net"
+    #vpn_settings['RemoteAddress'] = "203.181.77.81"
+    vpn_settings['XAuthEnabled'] = 1
+    vpn_settings['XAuthName'] = "freebit"
+    vpn_settings['XAuthPassword'] = "fbdc1234"
+    #vpn_settings['PromptForVPNPIN'] = false
+    #  vpn_settings['XAuthPasswordEncryption'] = "just say no"
+    #vpn_settings['XAuthPassword'] = "freebit"
+
+    vpn_payload['IPSec'] = vpn_settings
+
+    passcode_policy_payload = general_payload()
+    passcode_policy_payload['PayloadIdentifier'] = @@scep_prefix + ".passcodepolicy"
+    passcode_policy_payload['PayloadType'] = "com.apple.mobiledevice.passwordpolicy"
+    passcode_policy_payload['PayloadDisplayName'] = "Passcode Policy"
+    passcode_policy_payload['PayloadDescription'] = "Configures passcode policy."
+    passcode_policy_payload['maxFailedAttempts'] = 10
+    passcode_policy_payload['minLength'] = 6
+    passcode_policy_payload['maxPINAgeInDays'] = 90
+    passcode_policy_payload['requireAlphanumeric'] = false
+    passcode_policy_payload['minComplexChars'] = 0
+    passcode_policy_payload['maxInactivity'] = 5
+    passcode_policy_payload['forcePIN'] = true
+    passcode_policy_payload['allowSimple'] = false
+    passcode_policy_payload['pinHistory'] = 1
+    passcode_policy_payload['maxGracePeriod'] = 5
+
+    #Plist::Emit.dump([intranet_webclip_payload, vpn_cert_payload, vpn_payload, passcode_policy_payload])
+    Plist::Emit.dump([intranet_webclip_payload, vpn_cert_payload, vpn_payload])
+end
+
+
 def configuration_payload(request, encrypted_content)
     payload = general_payload()
     payload['PayloadIdentifier'] = @@scep_prefix + ".tonemobile"
@@ -489,8 +647,8 @@ def configuration_payload(request, encrypted_content)
     # strings that show up in UI, customisable
     payload['PayloadDisplayName'] = @@otaserver_title + " Config"
     payload['PayloadDescription'] = "Access to the " + @@otaserver_title
-    #payload['PayloadExpirationDate'] = Date.today + 365 # expire today, for demo purposes
-    payload['PayloadExpirationDate'] = DateTime.now - 0.375 + 0.003 # expire today, for demo purposes
+    payload['PayloadExpirationDate'] = Date.today + 365 # expire today, for demo purposes
+    #payload['PayloadExpirationDate'] = DateTime.now - 0.375 + 0.003 # expire today, for demo purposes
     #payload['PayloadExpirationDate'] = DateTime.now - 0.375 + 1 # expire today, for demo purposes
     #payload['PayloadExpirationDate'] = DateTime.now - 0.75 + 0.003 # expire today, for demo purposes
 
@@ -521,6 +679,7 @@ def init
         ra_cert_ok = true
         @@ssl_key = OpenSSL::PKey::RSA.new(File.read("ssl_private.pem"))
         @@ssl_cert = OpenSSL::X509::Certificate.new(File.read("ssl_cert.pem"))
+
         if File.exist?("ssl_chain.pem")
 	    @@ssl_chain = OpenSSL::X509::Certificate.new(File.read("ssl_chain.pem"))
             @@ssl_chain.extensions.each { |e|
@@ -546,7 +705,7 @@ def init
         then
             @@root_key = OpenSSL::PKey::RSA.new(1024)
             @@root_cert = issue_cert( OpenSSL::X509::Name.parse(
-                "/O=None/CN=TONE OTA Root CA (#{UUIDTools::UUID.random_create().to_s})"),
+                "/C=JP/O=TONE/CN=TONE OTA Root CA (#{UUIDTools::UUID.random_create().to_s})"),
                 @@root_key, 1, Time.now, Time.now+(86400*365), 
                 [ ["basicConstraints","CA:TRUE",true],
                 ["keyUsage","Digital Signature,keyCertSign,cRLSign",true] ],
@@ -562,7 +721,7 @@ def init
         then
             @@ra_key = OpenSSL::PKey::RSA.new(1024)
             @@ra_cert = issue_cert( OpenSSL::X509::Name.parse(
-                "/O=None/CN=TONE OTA SCEP RA"),
+                "/C=JP/O=TONE/CN=TONE OTA SCEP RA"),
                 @@ra_key, @@serial, Time.now, Time.now+(86400*365), 
                 [ ["basicConstraints","CA:TRUE",true],
                 ["keyUsage","Digital Signature,keyEncipherment",true] ],
@@ -573,7 +732,8 @@ def init
         end
         
         @@ssl_key = OpenSSL::PKey::RSA.new(1024)
-        @@ssl_cert = issue_cert( OpenSSL::X509::Name.parse("/O=None/CN=#{@@otaserver_title} Profile Service"),
+        #@@ssl_cert = issue_cert( OpenSSL::X509::Name.parse("/C=JP/O=TONE/CN=#{@@otaserver_title} Profile Service"),
+        @@ssl_cert = issue_cert( OpenSSL::X509::Name.parse("/C=JP/O=TONE/CN=ota.rnd.net"),
             @@ssl_key, @@serial, Time.now, Time.now+(86400*365), 
             [   
                 ["keyUsage","Digital Signature",true] ,
@@ -599,6 +759,7 @@ end
 
 init()
 
+=begin
 if @@ssl_chain != nil
     world = WEBrick::HTTPServer.new(
       :Port            => @@port,
@@ -619,6 +780,12 @@ else
       :SSLPrivateKey   => @@ssl_key
     )
 end
+=end
+world = WEBrick::HTTPServer.new(
+  :Port            => @@port,
+  :DocumentRoot    => Dir::pwd + "/htdocs",
+  :SSLEnable       => false,
+)
 
 world.mount_proc("/") { |req, res|
     res['Content-Type'] = "text/html"
@@ -650,6 +817,43 @@ world.mount_proc("/CA") { |req, res|
     print "before to set /CA res.body\n"
     res.body = @@root_cert.to_der
     print "set /CA res.body\n"
+}
+
+world.mount_proc("/servercert") { |req, res|
+    res['Content-Type'] = "application/x-x509-ca-cert"
+    res.body = @@root_cert.to_der
+
+    server_key = OpenSSL::PKey::RSA.new(1024)
+    #server_cert = issue_cert( OpenSSL::X509::Name.parse("/C=JP/O=TONE/CN=192.168.1.46"),
+    server_cert = issue_cert( OpenSSL::X509::Name.parse("/C=JP/O=TONE/CN=ipsec.rnd.net"),
+        server_key, @@serial, Time.now, Time.now+(86400*365), 
+        [   
+            ["keyUsage","Digital Signature",true] ,
+            ["subjectAltName", "DNS:" + @@ipsecaddress, true]
+        ],
+        @@root_cert, @@root_key, OpenSSL::Digest::SHA1.new)
+    @@serial += 1
+    File.open("serial", "w") { |f| f.write @@serial.to_s }
+    File.open("server_fqdn_private.pem", "w") { |f| f.write server_key.to_pem }
+    File.open("server_fqdn_cert.pem", "w") { |f| f.write server_cert.to_pem }
+}
+
+world.mount_proc("/clientcert") { |req, res|
+    res['Content-Type'] = "application/x-x509-ca-cert"
+    res.body = @@root_cert.to_der
+
+    client_key = OpenSSL::PKey::RSA.new(1024)
+    client_cert = issue_cert( OpenSSL::X509::Name.parse("/C=JP/O=TONE/CN=client"),
+        client_key, @@serial, Time.now, Time.now+(86400*365), 
+        [   
+            ["keyUsage","Digital Signature",true] ,
+            ["subjectAltName", "DNS:" + @@address, true]
+        ],
+        @@root_cert, @@root_key, OpenSSL::Digest::SHA1.new)
+    @@serial += 1
+    File.open("serial", "w") { |f| f.write @@serial.to_s }
+    File.open("client_private.pem", "w") { |f| f.write client_key.to_pem }
+    File.open("client_cert.pem", "w") { |f| f.write client_cert.to_pem }
 }
 
 world.mount_proc("/enroll") { |req, res|
@@ -751,11 +955,13 @@ world.mount_proc("/profile") { |req, res|
                   payload, OpenSSL::Cipher::Cipher::new("des-ede3-cbc"), 
                   OpenSSL::PKCS7::BINARY)
               configuration = configuration_payload(req, encrypted_profile.to_der)
-	    end
+            end
           else
             @@issued_first_profile.add(signers[0].serial.to_s)
-            payload = webclip_payload(req)
+            #payload = webclip_payload(req)
+			#payload = webclip_payload_with_profile_url(req)
             #payload = vpn_payload(req)
+            payload = vpn_configuration_payload(req)
             #payload = limit_payload(req)
             encrypted_profile = OpenSSL::PKCS7.encrypt(p7sign.certificates,
                 payload, OpenSSL::Cipher::Cipher::new("des-ede3-cbc"),
